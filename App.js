@@ -555,7 +555,7 @@ export default function App() {
   if (showSplash) return <SplashScreen onDone={() => setShowSplash(false)} />;
 
   return (
-    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={20}>
+    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={20}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
 
       {/* Header */}
