@@ -5,9 +5,10 @@ import {
   KeyboardAvoidingView, Platform, Animated, Easing
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as ImagePicker from "expo-image-picker";
+import * as IAmagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import TextRecognition from "@react-native-ml-kit/text-recognition";
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Path, Text as SvgText } from "react-native-svg";
 
 // ─── UNIT CONVERSION ─────────────────────────────────────────────────────────
 
@@ -220,6 +221,30 @@ const SETTINGS_KEY = "nt-settings-v1";
 const OLD_LIBRARY_KEY = "nt-library-v1";
 const HISTORY_SEEDED_KEY = "nt-history-seeded-v1";
 
+const WORKOUT_LIB_KEY = "qawi-workout-lib-v1";
+const WORKOUT_LOG_KEY = "qawi-workout-log-v1";
+const WORKOUT_LIB_SEEDED_KEY = "qawi-workout-lib-seeded-v1";
+
+const DEFAULT_WORKOUT_LIB = [
+  { id: "bench-press", name: "Bench Press", category: "push", equipment: "barbell" },
+  { id: "overhead-press", name: "Overhead Press", category: "push", equipment: "barbell" },
+  { id: "push-up", name: "Push-up", category: "push", equipment: "bodyweight" },
+  { id: "incline-db-press", name: "Incline DB Press", category: "push", equipment: "dumbbell" },
+  { id: "pull-up", name: "Pull-up", category: "pull", equipment: "bodyweight" },
+  { id: "barbell-row", name: "Barbell Row", category: "pull", equipment: "barbell" },
+  { id: "cable-row", name: "Cable Row", category: "pull", equipment: "cable" },
+  { id: "lat-pulldown", name: "Lat Pulldown", category: "pull", equipment: "cable" },
+  { id: "squat", name: "Squat", category: "legs", equipment: "barbell" },
+  { id: "romanian-deadlift", name: "Romanian Deadlift", category: "legs", equipment: "barbell" },
+  { id: "leg-press", name: "Leg Press", category: "legs", equipment: "machine" },
+  { id: "lunge", name: "Lunge", category: "legs", equipment: "bodyweight" },
+  { id: "plank", name: "Plank", category: "core", equipment: "bodyweight" },
+  { id: "dead-bug", name: "Dead Bug", category: "core", equipment: "bodyweight" },
+  { id: "cable-crunch", name: "Cable Crunch", category: "core", equipment: "cable" },
+  { id: "running", name: "Running", category: "cardio", equipment: "bodyweight" },
+  { id: "cycling", name: "Cycling", category: "cardio", equipment: "machine" },
+];
+
 const C = {
   bg: "#0a0a0f", card: "#13131f", border: "#ffffff15", gold: "#e2b96f",
   text: "#e8e6e0", muted: "#a0998c", green: "#22c55e", yellow: "#f59e0b",
@@ -300,11 +325,31 @@ function addDays(dateStr, n) {
   return d.toISOString().split("T")[0];
 }
 function formatDateLabel(dateStr) {
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   if (dateStr === today) return "Today";
   if (dateStr === addDays(today, -1)) return "Yesterday";
   return new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
+
+// ─── SPLASH HELPERS ──────────────────────────────────────────────────────────
+
+function starPath(cx, cy, R = 16, r = 6.5) {
+  const pts = [];
+  for (let i = 0; i < 8; i++) {
+    const oa = ((i * 45 - 90) * Math.PI) / 180;
+    const ia = (((i * 45 + 22.5) - 90) * Math.PI) / 180;
+    pts.push(`${i === 0 ? "M" : "L"} ${(cx + R * Math.cos(oa)).toFixed(2)},${(cy + R * Math.sin(oa)).toFixed(2)}`);
+    pts.push(`L ${(cx + r * Math.cos(ia)).toFixed(2)},${(cy + r * Math.sin(ia)).toFixed(2)}`);
+  }
+  return pts.join(" ") + " Z";
+}
+
+const STAR_CENTERS = [
+  [40, 40], [110, 40], [180, 40],
+  [40, 110], [110, 110], [180, 110],
+  [40, 180], [110, 180], [180, 180],
+];
 
 // ─── SPLASH SCREEN ───────────────────────────────────────────────────────────
 
@@ -337,8 +382,31 @@ function SplashScreen({ onDone }) {
   return (
     <Animated.View style={[ss.splash, { opacity: exitAnim }]}>
       <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], alignItems: "center", marginBottom: 48 }}>
-        <Text style={ss.splashTitle}>Qawi</Text>
-        <Text style={ss.splashSub}>قوي</Text>
+        <View style={{ position: "absolute", top: -16, alignItems: "center" }}>
+          <Svg width="220" height="200" opacity="0.07">
+            {STAR_CENTERS.map(([cx, cy], i) => (
+              <Path key={i} d={starPath(cx, cy)} fill="#e2b96f" />
+            ))}
+          </Svg>
+        </View>
+        <Svg height="78" width="300">
+          <Defs>
+            <SvgLinearGradient id="titleGrad" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor="#b8860b" stopOpacity="1" />
+              <Stop offset="0.5" stopColor="#e2b96f" stopOpacity="1" />
+              <Stop offset="1" stopColor="#f5d08a" stopOpacity="1" />
+            </SvgLinearGradient>
+          </Defs>
+          <SvgText x="150" y="68" textAnchor="middle" fontSize="56" fontWeight="900" letterSpacing="4" fill="url(#titleGrad)">
+            Al Qawi
+          </SvgText>
+        </Svg>
+        <View style={ss.splashDivider}>
+          <View style={ss.splashDividerLine} />
+          <Text style={ss.splashDividerStar}>✦</Text>
+          <View style={ss.splashDividerLine} />
+        </View>
+        <Text style={ss.splashArabic}>اَلْقَوِيُّ</Text>
       </Animated.View>
       <Animated.View style={{ opacity: taglineAnim, transform: [{ translateY: taglineSlide }], alignItems: "center", paddingHorizontal: 32 }}>
         <Text style={ss.splashHadith}>
@@ -357,7 +425,7 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [tab, setTab] = useState("log");
   const [dayType, setDayType] = useState("deficit");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`; });
   const [entries, setEntries] = useState([]);
   const [library, setLibrary] = useState(DEFAULT_LIBRARY);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -378,14 +446,37 @@ export default function App() {
   const [scannedData, setScannedData] = useState(null);
   const [scannedUnit, setScannedUnit] = useState("serving");
   const [showScannedUnitPicker, setShowScannedUnitPicker] = useState(false);
+  const [editingLogIdx, setEditingLogIdx] = useState(null);
+  const [editLogEntry, setEditLogEntry] = useState({ item: "", calories: "", sodium: "", protein: "", fiber: "" });
+  const [editingLibIdx, setEditingLibIdx] = useState(null);
+  const [editLibItem, setEditLibItem] = useState({ name: "", unit: "serving", calories: "", sodium: "", protein: "", fiber: "" });
+  const [showEditLibUnitPicker, setShowEditLibUnitPicker] = useState(false);
 
-  const today = new Date().toISOString().split("T")[0];
+  // Workout state
+  const [wrkDate, setWrkDate] = useState(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`; });
+  const [workoutDayType, setWorkoutDayType] = useState("rest");
+  const [workoutExercises, setWorkoutExercises] = useState([]);
+  const [workoutLib, setWorkoutLib] = useState(DEFAULT_WORKOUT_LIB);
+  const [wrkLoaded, setWrkLoaded] = useState(false);
+  const [expandedWrkIdx, setExpandedWrkIdx] = useState(null);
+  const [showAddExModal, setShowAddExModal] = useState(false);
+  const [exSearch, setExSearch] = useState("");
+  const [pendingEx, setPendingEx] = useState(null);
+  const [pendingSets, setPendingSets] = useState([{ weight: "", reps: "", notes: "" }]);
+  const [newWrkEx, setNewWrkEx] = useState({ name: "", category: "push", equipment: "barbell" });
+  const [showNewWrkExForm, setShowNewWrkExForm] = useState(false);
+  const [allWorkoutLogs, setAllWorkoutLogs] = useState({});
+
+  const _n = new Date();
+  const today = `${_n.getFullYear()}-${String(_n.getMonth() + 1).padStart(2, '0')}-${String(_n.getDate()).padStart(2, '0')}`;
   const isFuture = date > today;
+  const wrkIsFuture = wrkDate > today;
   const storageKey = `${LOG_KEY}-${date}`;
   const metaKey = `${META_KEY}-${date}`;
 
   useEffect(() => { loadData(); }, [date]);
-  useEffect(() => { if (tab === "history") loadAllHistory(); }, [tab]);
+  useEffect(() => { loadWorkoutData(wrkDate); }, [wrkDate]);
+  useEffect(() => { if (tab === "history") { loadAllHistory(); loadAllWorkoutHistory(); } }, [tab]);
   useEffect(() => { if (selected) setLogUnit(selected.unit); }, [selected]);
 
   async function seedHistory() {
@@ -430,10 +521,52 @@ export default function App() {
     } catch {}
   }
 
+  async function loadWorkoutData(dateToLoad) {
+    setWrkLoaded(false);
+    try {
+      const seeded = await AsyncStorage.getItem(WORKOUT_LIB_SEEDED_KEY);
+      if (!seeded) {
+        await AsyncStorage.setItem(WORKOUT_LIB_KEY, JSON.stringify(DEFAULT_WORKOUT_LIB));
+        await AsyncStorage.setItem(WORKOUT_LIB_SEEDED_KEY, "true");
+        setWorkoutLib(DEFAULT_WORKOUT_LIB);
+      } else {
+        const lib = await AsyncStorage.getItem(WORKOUT_LIB_KEY);
+        if (lib) setWorkoutLib(JSON.parse(lib));
+      }
+    } catch {}
+    try {
+      const log = await AsyncStorage.getItem(`${WORKOUT_LOG_KEY}-${dateToLoad}`);
+      if (log) {
+        const parsed = JSON.parse(log);
+        setWorkoutDayType(parsed.meta?.dayType || "rest");
+        setWorkoutExercises(parsed.exercises || []);
+      } else {
+        setWorkoutDayType("rest");
+        setWorkoutExercises([]);
+      }
+    } catch { setWorkoutDayType("rest"); setWorkoutExercises([]); }
+    setWrkLoaded(true);
+  }
+
+  async function loadAllWorkoutHistory() {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const pairs = await AsyncStorage.multiGet(keys.filter(k => k.startsWith(WORKOUT_LOG_KEY + "-")));
+      const logs = {};
+      pairs.forEach(([k, v]) => { try { logs[k.replace(WORKOUT_LOG_KEY + "-", "")] = JSON.parse(v); } catch {} });
+      setAllWorkoutLogs(logs);
+    } catch {}
+  }
+
   useEffect(() => { if (!loaded) return; AsyncStorage.setItem(storageKey, JSON.stringify(entries)).catch(() => {}); }, [entries, loaded]);
   useEffect(() => { if (!loaded) return; AsyncStorage.setItem(metaKey, JSON.stringify({ dayType })).catch(() => {}); }, [dayType, loaded]);
   useEffect(() => { if (!loaded) return; AsyncStorage.setItem(LIBRARY_KEY, JSON.stringify(library)).catch(() => {}); }, [library, loaded]);
   useEffect(() => { if (!loaded) return; AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)).catch(() => {}); }, [settings, loaded]);
+  useEffect(() => {
+    if (!wrkLoaded) return;
+    AsyncStorage.setItem(`${WORKOUT_LOG_KEY}-${wrkDate}`, JSON.stringify({ meta: { dayType: workoutDayType }, exercises: workoutExercises })).catch(() => {});
+  }, [workoutDayType, workoutExercises, wrkLoaded, wrkDate]);
+  useEffect(() => { if (!wrkLoaded) return; AsyncStorage.setItem(WORKOUT_LIB_KEY, JSON.stringify(workoutLib)).catch(() => {}); }, [workoutLib, wrkLoaded]);
 
   const targets = dayType === "deficit"
     ? { calories: settings.deficitCalories, sodium: settings.sodiumTarget, protein: settings.proteinTarget, fiber: settings.fiberTarget }
@@ -487,9 +620,13 @@ export default function App() {
 
   function addToLibrary() {
     if (!newFood.name.trim()) return;
-    setLibrary([...library, { name: newFood.name.trim(), unit: newFood.unit, calories: parseFloat(newFood.calories) || 0, sodium: parseFloat(newFood.sodium) || 0, protein: parseFloat(newFood.protein) || 0, fiber: parseFloat(newFood.fiber) || 0 }]);
+    const newItem = { name: newFood.name.trim(), unit: newFood.unit, calories: parseFloat(newFood.calories) || 0, sodium: parseFloat(newFood.sodium) || 0, protein: parseFloat(newFood.protein) || 0, fiber: parseFloat(newFood.fiber) || 0 };
+    setLibrary([...library, newItem]);
     setNewFood({ name: "", unit: "serving", calories: "", sodium: "", protein: "", fiber: "" });
-    showFlash("✓ Added to library");
+    Alert.alert("Add to today's log?", "", [
+      { text: "No", onPress: () => { showFlash("✓ Added to library"); } },
+      { text: "Yes", onPress: () => { showFlash("✓ Added to library"); setSelected(newItem); setSearch(newItem.name); setQty("1"); setLogUnit(newItem.unit); setTab("log"); } },
+    ]);
   }
 
   function deleteFromLibrary(idx) {
@@ -497,6 +634,34 @@ export default function App() {
       { text: "Cancel", style: "cancel" },
       { text: "Remove", style: "destructive", onPress: () => { setLibrary(library.filter((_, i) => i !== idx)); showFlash("Removed from library"); } }
     ]);
+  }
+
+  function openEditLog(idx) {
+    const e = entries[idx];
+    setEditLogEntry({ item: e.item, calories: String(e.calories), sodium: String(e.sodium), protein: String(e.protein), fiber: String(e.fiber) });
+    setEditingLogIdx(idx);
+  }
+
+  function saveEditLog() {
+    const updated = [...entries];
+    updated[editingLogIdx] = { item: editLogEntry.item, calories: parseFloat(editLogEntry.calories) || 0, sodium: parseFloat(editLogEntry.sodium) || 0, protein: parseFloat(editLogEntry.protein) || 0, fiber: parseFloat(editLogEntry.fiber) || 0 };
+    setEntries(updated);
+    setEditingLogIdx(null);
+    showFlash("✓ Entry updated");
+  }
+
+  function openEditLib(idx) {
+    const f = library[idx];
+    setEditLibItem({ name: f.name, unit: f.unit, calories: String(f.calories), sodium: String(f.sodium), protein: String(f.protein), fiber: String(f.fiber) });
+    setEditingLibIdx(idx);
+  }
+
+  function saveEditLib() {
+    const updated = [...library];
+    updated[editingLibIdx] = { name: editLibItem.name.trim(), unit: editLibItem.unit, calories: parseFloat(editLibItem.calories) || 0, sodium: parseFloat(editLibItem.sodium) || 0, protein: parseFloat(editLibItem.protein) || 0, fiber: parseFloat(editLibItem.fiber) || 0 };
+    setLibrary(updated);
+    setEditingLibIdx(null);
+    showFlash("✓ Library item updated");
   }
 
   async function scanLabel() {
@@ -547,6 +712,24 @@ export default function App() {
     });
   }
 
+  function getWorkoutPRs() {
+    const prs = {};
+    Object.entries(allWorkoutLogs).forEach(([d, log]) => {
+      (log.exercises || []).forEach(ex => {
+        const exInfo = workoutLib.find(e => e.id === ex.exerciseId);
+        const name = exInfo?.name || ex.exerciseId;
+        (ex.sets || []).forEach(set => {
+          const w = parseFloat(set.weight) || 0;
+          const r = parseFloat(set.reps) || 0;
+          if (w > 0 && (!prs[name] || w > prs[name].weight)) {
+            prs[name] = { weight: w, reps: r, date: d };
+          }
+        });
+      });
+    });
+    return prs;
+  }
+
   function barColor(val, target) { const p = val / target; if (p >= 1) return C.red; if (p >= 0.8) return C.yellow; return C.green; }
   function pct(val, target) { return Math.min(100, (val / target) * 100); }
   const logUnitOptions = selected ? compatibleUnits(selected.unit) : UNITS;
@@ -573,6 +756,15 @@ export default function App() {
             ))}
           </View>
         )}
+        {tab === "workout" && (
+          <View style={s.dayToggle}>
+            {["rest", "workout"].map(t => (
+              <TouchableOpacity key={t} onPress={() => setWorkoutDayType(t)} style={[s.toggleBtn, workoutDayType === t && s.toggleBtnActive]}>
+                <Text style={[s.toggleText, workoutDayType === t && s.toggleTextActive]}>{t.toUpperCase()}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Date Navigator */}
@@ -586,6 +778,20 @@ export default function App() {
             <Text style={s.dateSub}>{date}</Text>
           </View>
           <TouchableOpacity onPress={() => { if (!isFuture) setDate(addDays(date, 1)); }} style={[s.dateArrow, isFuture && { opacity: 0.3 }]}>
+            <Text style={s.dateArrowText}>▶</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {tab === "workout" && (
+        <View style={s.dateNav}>
+          <TouchableOpacity onPress={() => setWrkDate(addDays(wrkDate, -1))} style={s.dateArrow}>
+            <Text style={s.dateArrowText}>◀</Text>
+          </TouchableOpacity>
+          <View style={s.dateLabelWrap}>
+            <Text style={s.dateLabel}>{formatDateLabel(wrkDate)}</Text>
+            <Text style={s.dateSub}>{wrkDate}</Text>
+          </View>
+          <TouchableOpacity onPress={() => { if (!wrkIsFuture) setWrkDate(addDays(wrkDate, 1)); }} style={[s.dateArrow, wrkIsFuture && { opacity: 0.3 }]}>
             <Text style={s.dateArrowText}>▶</Text>
           </TouchableOpacity>
         </View>
@@ -613,7 +819,7 @@ export default function App() {
 
       {/* Tabs */}
       <View style={s.tabs}>
-        {[{ key: "log", label: "📋 LOG" }, { key: "library", label: "📚 LIB" }, { key: "history", label: "📊 HIST" }, { key: "settings", label: "⚙️ SET" }].map(t => (
+        {[{ key: "log", label: "📋 LOG" }, { key: "library", label: "📚 LIB" }, { key: "workout", label: "💪 WRK" }, { key: "history", label: "📊 HIST" }, { key: "settings", label: "⚙️ SET" }].map(t => (
           <TouchableOpacity key={t.key} onPress={() => setTab(t.key)} style={[s.tabBtn, tab === t.key && s.tabBtnActive]}>
             <Text style={[s.tabText, tab === t.key && s.tabTextActive]}>{t.label}</Text>
           </TouchableOpacity>
@@ -694,10 +900,10 @@ export default function App() {
                 <Text style={s.cardTitle}>LOG — {formatDateLabel(date).toUpperCase()}</Text>
                 {entries.map((e, i) => (
                   <View key={i} style={[s.entryRow, i > 0 && s.entryBorder]}>
-                    <View style={{ flex: 1 }}>
+                    <TouchableOpacity style={{ flex: 1 }} onPress={() => openEditLog(i)}>
                       <Text style={s.entryName} numberOfLines={2}>{i + 1}. {e.item}</Text>
                       <Text style={s.entrySub}>{e.calories}cal · {e.sodium}mg · {e.protein}g pro · {e.fiber}g fib</Text>
-                    </View>
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => deleteEntry(i)} style={s.deleteBtn}><Text style={s.deleteBtnText}>✕</Text></TouchableOpacity>
                   </View>
                 ))}
@@ -758,14 +964,166 @@ export default function App() {
               {libFiltered.length === 0 && <Text style={s.empty}>No items found.</Text>}
               {libFiltered.map((f, i) => (
                 <View key={i} style={[s.entryRow, i > 0 && s.entryBorder]}>
-                  <View style={{ flex: 1 }}>
+                  <TouchableOpacity style={{ flex: 1 }} onPress={() => openEditLib(library.indexOf(f))}>
                     <Text style={s.entryName} numberOfLines={1}>{f.name}</Text>
                     <Text style={s.entrySub}>per {f.unit} · {f.calories}cal · {f.sodium}mg · {f.protein}g pro · {f.fiber}g fib</Text>
-                  </View>
+                  </TouchableOpacity>
                   <TouchableOpacity onPress={() => deleteFromLibrary(library.indexOf(f))} style={s.deleteBtn}><Text style={s.deleteBtnText}>✕</Text></TouchableOpacity>
                 </View>
               ))}
             </View>
+          </View>
+        )}
+
+        {/* WORKOUT TAB */}
+        {tab === "workout" && (
+          <View style={s.pad}>
+            {workoutDayType === "rest" ? (
+              <View style={s.card}>
+                <Text style={[s.empty, { fontSize: 32, paddingBottom: 4 }]}>🛌</Text>
+                <Text style={s.empty}>Rest day. Recovery is part of the plan.</Text>
+              </View>
+            ) : (
+              <>
+                {workoutExercises.length === 0 && wrkLoaded && (
+                  <View style={s.card}>
+                    <Text style={s.empty}>No exercises logged. Tap ADD EXERCISE to start.</Text>
+                  </View>
+                )}
+                {workoutExercises.map((ex, exIdx) => {
+                  const exInfo = workoutLib.find(e => e.id === ex.exerciseId);
+                  const exName = exInfo?.name || ex.exerciseId;
+                  const isExpanded = expandedWrkIdx === exIdx;
+                  const validSets = ex.sets.filter(st => st.weight || st.reps);
+                  const summary = ex.sets.length > 0
+                    ? `${ex.sets.length} set${ex.sets.length !== 1 ? "s" : ""}${validSets.length > 0 ? ` — ${validSets[0].weight}lb × ${validSets[0].reps}` : ""}`
+                    : "0 sets";
+                  return (
+                    <View key={exIdx} style={[s.card, { marginBottom: 8 }]}>
+                      <TouchableOpacity onPress={() => setExpandedWrkIdx(isExpanded ? null : exIdx)}
+                        style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[s.entryName, { color: C.gold }]}>{exName}</Text>
+                          <Text style={s.entrySub}>{summary}</Text>
+                        </View>
+                        <Text style={{ color: C.muted, marginLeft: 8 }}>{isExpanded ? "▲" : "▼"}</Text>
+                      </TouchableOpacity>
+                      {isExpanded && (
+                        <>
+                          {ex.sets.map((set, setIdx) => (
+                            <View key={setIdx} style={[s.entryRow, s.entryBorder, { alignItems: "center", gap: 6 }]}>
+                              <Text style={[s.entrySub, { width: 20 }]}>{setIdx + 1}.</Text>
+                              <TextInput
+                                style={[s.input, { flex: 1, marginBottom: 0, textAlign: "center", paddingHorizontal: 4 }]}
+                                placeholder="lb" placeholderTextColor={C.muted} keyboardType="decimal-pad"
+                                value={set.weight}
+                                onChangeText={t => setWorkoutExercises(workoutExercises.map((ex2, i) => i !== exIdx ? ex2 : { ...ex2, sets: ex2.sets.map((s2, j) => j !== setIdx ? s2 : { ...s2, weight: t }) }))}
+                              />
+                              <TextInput
+                                style={[s.input, { flex: 1, marginBottom: 0, textAlign: "center", paddingHorizontal: 4 }]}
+                                placeholder="reps" placeholderTextColor={C.muted} keyboardType="number-pad"
+                                value={set.reps}
+                                onChangeText={t => setWorkoutExercises(workoutExercises.map((ex2, i) => i !== exIdx ? ex2 : { ...ex2, sets: ex2.sets.map((s2, j) => j !== setIdx ? s2 : { ...s2, reps: t }) }))}
+                              />
+                              <TouchableOpacity onPress={() => {
+                                const newSets = ex.sets.filter((_, j) => j !== setIdx);
+                                if (newSets.length === 0) {
+                                  setWorkoutExercises(workoutExercises.filter((_, i) => i !== exIdx));
+                                  setExpandedWrkIdx(null);
+                                } else {
+                                  setWorkoutExercises(workoutExercises.map((ex2, i) => i !== exIdx ? ex2 : { ...ex2, sets: newSets }));
+                                }
+                              }} style={s.deleteBtn}>
+                                <Text style={s.deleteBtnText}>✕</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                          <View style={{ flexDirection: "row", marginTop: 8, gap: 8 }}>
+                            <TouchableOpacity
+                              style={[s.addBtn, { flex: 1, backgroundColor: "#ffffff10" }]}
+                              onPress={() => setWorkoutExercises(workoutExercises.map((ex2, i) => i !== exIdx ? ex2 : { ...ex2, sets: [...ex2.sets, { weight: "", reps: "", notes: "" }] }))}
+                            >
+                              <Text style={[s.addBtnText, { color: C.text }]}>+ SET</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[s.addBtn, { flex: 1, backgroundColor: "#ef444420" }]}
+                              onPress={() => Alert.alert("Remove Exercise", "Remove this exercise and all its sets?", [
+                                { text: "Cancel", style: "cancel" },
+                                { text: "Remove", style: "destructive", onPress: () => { setWorkoutExercises(workoutExercises.filter((_, i) => i !== exIdx)); setExpandedWrkIdx(null); } },
+                              ])}
+                            >
+                              <Text style={[s.addBtnText, { color: C.red }]}>DELETE</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </>
+                      )}
+                    </View>
+                  );
+                })}
+                <TouchableOpacity
+                  onPress={() => { setShowAddExModal(true); setExSearch(""); setPendingEx(null); setPendingSets([{ weight: "", reps: "", notes: "" }]); }}
+                  style={[s.addBtn, { marginBottom: 12 }]}
+                >
+                  <Text style={s.addBtnText}>+ ADD EXERCISE</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* Exercise Library */}
+            <View style={s.card}>
+              <Text style={s.cardTitle}>EXERCISE LIBRARY</Text>
+              {["push", "pull", "legs", "core", "cardio"].map(cat => {
+                const catExs = workoutLib.filter(e => e.category === cat);
+                if (catExs.length === 0) return null;
+                return (
+                  <View key={cat} style={{ marginBottom: 10 }}>
+                    <Text style={[s.fieldLabel, { color: C.gold, marginBottom: 4 }]}>{cat.toUpperCase()}</Text>
+                    {catExs.map((ex, i) => (
+                      <Text key={i} style={[s.entrySub, { paddingVertical: 2 }]}>• {ex.name} ({ex.equipment})</Text>
+                    ))}
+                  </View>
+                );
+              })}
+              <TouchableOpacity onPress={() => setShowNewWrkExForm(!showNewWrkExForm)}
+                style={[s.addBtn, { backgroundColor: "#ffffff10", marginTop: 4 }]}>
+                <Text style={[s.addBtnText, { color: C.text }]}>{showNewWrkExForm ? "CANCEL" : "+ CUSTOM EXERCISE"}</Text>
+              </TouchableOpacity>
+              {showNewWrkExForm && (
+                <View style={{ marginTop: 10 }}>
+                  <TextInput style={s.input} placeholder="Exercise name..." placeholderTextColor={C.muted}
+                    value={newWrkEx.name} onChangeText={t => setNewWrkEx({ ...newWrkEx, name: t })} />
+                  <Text style={s.fieldLabel}>CATEGORY</Text>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 8 }}>
+                    {["push", "pull", "legs", "core", "cardio"].map(cat => (
+                      <TouchableOpacity key={cat} onPress={() => setNewWrkEx({ ...newWrkEx, category: cat })}
+                        style={[s.actBtn, newWrkEx.category === cat && s.actBtnActive]}>
+                        <Text style={[s.actBtnText, newWrkEx.category === cat && { color: C.bg, fontWeight: "bold" }]}>{cat.toUpperCase()}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <Text style={s.fieldLabel}>EQUIPMENT</Text>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 8 }}>
+                    {["barbell", "dumbbell", "cable", "machine", "bodyweight"].map(eq => (
+                      <TouchableOpacity key={eq} onPress={() => setNewWrkEx({ ...newWrkEx, equipment: eq })}
+                        style={[s.actBtn, newWrkEx.equipment === eq && s.actBtnActive]}>
+                        <Text style={[s.actBtnText, newWrkEx.equipment === eq && { color: C.bg, fontWeight: "bold" }]}>{eq.toUpperCase()}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <TouchableOpacity onPress={() => {
+                    if (!newWrkEx.name.trim()) return;
+                    const id = newWrkEx.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") + "-" + Date.now();
+                    setWorkoutLib([...workoutLib, { id, name: newWrkEx.name.trim(), category: newWrkEx.category, equipment: newWrkEx.equipment }]);
+                    setNewWrkEx({ name: "", category: "push", equipment: "barbell" });
+                    setShowNewWrkExForm(false);
+                    showFlash("✓ Exercise added");
+                  }} style={s.addBtn}>
+                    <Text style={s.addBtnText}>ADD TO LIBRARY</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+            <View style={{ height: 20 }} />
           </View>
         )}
 
@@ -792,6 +1150,24 @@ export default function App() {
                   </View>
                 ))}
             </View>
+            {(() => {
+              const prs = getWorkoutPRs();
+              const prEntries = Object.entries(prs);
+              if (prEntries.length === 0) return null;
+              return (
+                <View style={s.card}>
+                  <Text style={s.cardTitle}>WORKOUT SUMMARY — ALL-TIME PRs</Text>
+                  {prEntries.map(([name, pr], i) => (
+                    <View key={name} style={[s.entryRow, i > 0 && s.entryBorder]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.entryName}>{name}{pr.date === today ? " ⭐" : ""}</Text>
+                        <Text style={s.entrySub}>{pr.weight}lb × {pr.reps} reps · {pr.date}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              );
+            })()}
           </View>
         )}
 
@@ -925,6 +1301,84 @@ export default function App() {
         </View>
       </Modal>
 
+      {/* Edit Log Entry Modal */}
+      <Modal visible={editingLogIdx !== null} transparent animationType="slide" onRequestClose={() => setEditingLogIdx(null)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>EDIT LOG ENTRY</Text>
+            <Text style={s.fieldLabel}>ITEM DESCRIPTION</Text>
+            <TextInput style={s.input} placeholder="Item name..." placeholderTextColor={C.muted} value={editLogEntry.item} onChangeText={t => setEditLogEntry({ ...editLogEntry, item: t })} />
+            <View style={s.fieldsRow}>
+              {["calories", "sodium", "protein", "fiber"].map(f => (
+                <View key={f} style={{ flex: 1, marginHorizontal: 3 }}>
+                  <Text style={s.fieldLabel}>{f === "calories" ? "CAL" : f === "sodium" ? "NA" : f === "protein" ? "PRO" : "FIB"}</Text>
+                  <TextInput style={[s.input, { textAlign: "center", paddingHorizontal: 4 }]} keyboardType="decimal-pad" placeholderTextColor={C.muted} value={editLogEntry[f]} onChangeText={t => setEditLogEntry({ ...editLogEntry, [f]: t })} />
+                </View>
+              ))}
+            </View>
+            <View style={s.row}>
+              <TouchableOpacity onPress={() => setEditingLogIdx(null)} style={[s.addBtn, { backgroundColor: "#ffffff15", flex: 0.4 }]}>
+                <Text style={[s.addBtnText, { color: C.text }]}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={saveEditLog} style={[s.addBtn, { flex: 0.6 }]}>
+                <Text style={s.addBtnText}>SAVE</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Library Item Modal */}
+      <Modal visible={editingLibIdx !== null} transparent animationType="slide" onRequestClose={() => setEditingLibIdx(null)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>EDIT LIBRARY ITEM</Text>
+            <Text style={s.fieldLabel}>FOOD NAME</Text>
+            <TextInput style={s.input} placeholder="Food name..." placeholderTextColor={C.muted} value={editLibItem.name} onChangeText={t => setEditLibItem({ ...editLibItem, name: t })} />
+            <Text style={s.fieldLabel}>UNIT (nutrition values are per 1 of this unit)</Text>
+            <TouchableOpacity onPress={() => setShowEditLibUnitPicker(true)} style={[s.input, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
+              <Text style={{ color: C.text, fontSize: 14 }}>{editLibItem.unit}</Text>
+              <Text style={{ color: C.muted }}>▼</Text>
+            </TouchableOpacity>
+            <View style={s.fieldsRow}>
+              {["calories", "sodium", "protein", "fiber"].map(f => (
+                <View key={f} style={{ flex: 1, marginHorizontal: 3 }}>
+                  <Text style={s.fieldLabel}>{f === "calories" ? "CAL" : f === "sodium" ? "NA" : f === "protein" ? "PRO" : "FIB"}</Text>
+                  <TextInput style={[s.input, { textAlign: "center", paddingHorizontal: 4 }]} keyboardType="decimal-pad" placeholderTextColor={C.muted} value={editLibItem[f]} onChangeText={t => setEditLibItem({ ...editLibItem, [f]: t })} />
+                </View>
+              ))}
+            </View>
+            <View style={s.row}>
+              <TouchableOpacity onPress={() => setEditingLibIdx(null)} style={[s.addBtn, { backgroundColor: "#ffffff15", flex: 0.4 }]}>
+                <Text style={[s.addBtnText, { color: C.text }]}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={saveEditLib} style={[s.addBtn, { flex: 0.6 }]}>
+                <Text style={s.addBtnText}>SAVE</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Library Unit Picker Modal */}
+      <Modal visible={showEditLibUnitPicker} transparent animationType="slide" onRequestClose={() => setShowEditLibUnitPicker(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>SELECT UNIT</Text>
+            <ScrollView style={{ maxHeight: 350 }}>
+              {UNITS.map(u => (
+                <TouchableOpacity key={u} onPress={() => { setEditLibItem({ ...editLibItem, unit: u }); setShowEditLibUnitPicker(false); }} style={[s.unitItem, editLibItem.unit === u && s.unitItemActive]}>
+                  <Text style={[s.unitItemText, editLibItem.unit === u && { color: C.gold, fontWeight: "bold" }]}>{u}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity onPress={() => setShowEditLibUnitPicker(false)} style={[s.addBtn, { marginTop: 12, backgroundColor: "#ffffff15" }]}>
+              <Text style={[s.addBtnText, { color: C.text }]}>CANCEL</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Scan Result Modal */}
       <Modal visible={scanModal} transparent animationType="slide" onRequestClose={() => { setScanModal(false); setScannedData(null); }}>
         <View style={s.modalOverlay}>
@@ -962,6 +1416,80 @@ export default function App() {
           </View>
         </View>
       </Modal>
+
+      {/* Add Exercise Modal */}
+      <Modal visible={showAddExModal} transparent animationType="slide" onRequestClose={() => setShowAddExModal(false)}>
+        <View style={s.modalOverlay}>
+          <View style={[s.modalCard, { maxHeight: "85%" }]}>
+            <Text style={s.modalTitle}>ADD EXERCISE</Text>
+            {!pendingEx ? (
+              <>
+                <TextInput style={s.input} placeholder="Search exercises..." placeholderTextColor={C.muted}
+                  value={exSearch} onChangeText={setExSearch} />
+                <ScrollView style={{ maxHeight: 320 }}>
+                  {workoutLib.filter(e => e.name.toLowerCase().includes(exSearch.toLowerCase())).map((ex, i) => (
+                    <TouchableOpacity key={i}
+                      onPress={() => { setPendingEx(ex); setPendingSets([{ weight: "", reps: "", notes: "" }]); }}
+                      style={s.unitItem}>
+                      <Text style={s.unitItemText}>{ex.name}</Text>
+                      <Text style={[s.entrySub, { marginTop: 2 }]}>{ex.category} · {ex.equipment}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                <TouchableOpacity onPress={() => setShowAddExModal(false)}
+                  style={[s.addBtn, { marginTop: 12, backgroundColor: "#ffffff15" }]}>
+                  <Text style={[s.addBtnText, { color: C.text }]}>CANCEL</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={[s.cardTitle, { marginBottom: 12 }]}>{pendingEx.name.toUpperCase()}</Text>
+                <ScrollView style={{ maxHeight: 260 }}>
+                  {pendingSets.map((set, i) => (
+                    <View key={i} style={{ flexDirection: "row", alignItems: "center", marginBottom: 6, gap: 6 }}>
+                      <Text style={[s.fieldLabel, { width: 24, marginBottom: 0 }]}>{i + 1}.</Text>
+                      <TextInput style={[s.input, { flex: 1, marginBottom: 0, textAlign: "center", paddingHorizontal: 4 }]}
+                        placeholder="lb" placeholderTextColor={C.muted} keyboardType="decimal-pad"
+                        value={set.weight}
+                        onChangeText={t => setPendingSets(pendingSets.map((s2, j) => j === i ? { ...s2, weight: t } : s2))} />
+                      <TextInput style={[s.input, { flex: 1, marginBottom: 0, textAlign: "center", paddingHorizontal: 4 }]}
+                        placeholder="reps" placeholderTextColor={C.muted} keyboardType="number-pad"
+                        value={set.reps}
+                        onChangeText={t => setPendingSets(pendingSets.map((s2, j) => j === i ? { ...s2, reps: t } : s2))} />
+                      <TouchableOpacity onPress={() => setPendingSets(pendingSets.filter((_, j) => j !== i))}
+                        style={s.deleteBtn}>
+                        <Text style={s.deleteBtnText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+                <TouchableOpacity onPress={() => setPendingSets([...pendingSets, { weight: "", reps: "", notes: "" }])}
+                  style={[s.addBtn, { backgroundColor: "#ffffff10", marginBottom: 8 }]}>
+                  <Text style={[s.addBtnText, { color: C.text }]}>+ ADD SET</Text>
+                </TouchableOpacity>
+                <View style={s.row}>
+                  <TouchableOpacity onPress={() => setPendingEx(null)}
+                    style={[s.addBtn, { backgroundColor: "#ffffff15", flex: 0.4 }]}>
+                    <Text style={[s.addBtnText, { color: C.text }]}>BACK</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => {
+                    const valid = pendingSets.filter(st => st.weight || st.reps);
+                    if (valid.length === 0) { showFlash("Add at least one set"); return; }
+                    setWorkoutExercises([...workoutExercises, { exerciseId: pendingEx.id, sets: valid }]);
+                    setShowAddExModal(false);
+                    setPendingEx(null);
+                    setPendingSets([{ weight: "", reps: "", notes: "" }]);
+                    setExSearch("");
+                    showFlash("✓ Added: " + pendingEx.name);
+                  }} style={[s.addBtn, { flex: 0.6 }]}>
+                    <Text style={s.addBtnText}>SAVE</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -970,8 +1498,10 @@ export default function App() {
 
 const ss = StyleSheet.create({
   splash: { flex: 1, backgroundColor: "#0a0a0f", alignItems: "center", justifyContent: "center", paddingHorizontal: 32 },
-  splashTitle: { fontSize: 56, fontWeight: "900", color: "#e2b96f", letterSpacing: 4, textAlign: "center" },
-  splashSub: { fontSize: 28, color: "#e2b96f80", marginTop: 4, textAlign: "center" },
+  splashArabic: { fontSize: 52, fontWeight: "700", color: "#e2b96f", letterSpacing: 6, marginTop: 8, textAlign: "center" },
+  splashDivider: { flexDirection: "row", alignItems: "center", width: 160, marginTop: 12, marginBottom: 4 },
+  splashDividerLine: { flex: 1, height: 1, backgroundColor: "#e2b96f99" },
+  splashDividerStar: { color: "#e2b96f99", fontSize: 14, marginHorizontal: 8 },
   splashHadith: { fontSize: 15, color: "#e8e6e0", textAlign: "center", lineHeight: 24, fontStyle: "italic", marginBottom: 10 },
   splashSource: { fontSize: 11, color: "#a0998c", letterSpacing: 2, marginBottom: 24, textAlign: "center" },
   splashTagline: { fontSize: 18, color: "#e2b96f", letterSpacing: 3, fontWeight: "bold", textAlign: "center", textTransform: "uppercase" },
