@@ -334,23 +334,6 @@ function formatDateLabel(dateStr) {
 
 // ─── SPLASH HELPERS ──────────────────────────────────────────────────────────
 
-function starPath(cx, cy, R = 16, r = 6.5) {
-  const pts = [];
-  for (let i = 0; i < 8; i++) {
-    const oa = ((i * 45 - 90) * Math.PI) / 180;
-    const ia = (((i * 45 + 22.5) - 90) * Math.PI) / 180;
-    pts.push(`${i === 0 ? "M" : "L"} ${(cx + R * Math.cos(oa)).toFixed(2)},${(cy + R * Math.sin(oa)).toFixed(2)}`);
-    pts.push(`L ${(cx + r * Math.cos(ia)).toFixed(2)},${(cy + r * Math.sin(ia)).toFixed(2)}`);
-  }
-  return pts.join(" ") + " Z";
-}
-
-const STAR_CENTERS = [
-  [40, 40], [110, 40], [180, 40],
-  [40, 110], [110, 110], [180, 110],
-  [40, 180], [110, 180], [180, 180],
-];
-
 // ─── SPLASH SCREEN ───────────────────────────────────────────────────────────
 
 function SplashScreen({ onDone }) {
@@ -382,13 +365,6 @@ function SplashScreen({ onDone }) {
   return (
     <Animated.View style={[ss.splash, { opacity: exitAnim }]}>
       <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], alignItems: "center", marginBottom: 48 }}>
-        <View style={{ position: "absolute", top: -16, alignItems: "center" }}>
-          <Svg width="220" height="200" opacity="0.07">
-            {STAR_CENTERS.map(([cx, cy], i) => (
-              <Path key={i} d={starPath(cx, cy)} fill="#e2b96f" />
-            ))}
-          </Svg>
-        </View>
         <Svg height="78" width="300">
           <Defs>
             <SvgLinearGradient id="titleGrad" x1="0" y1="0" x2="1" y2="1">
@@ -1302,61 +1278,65 @@ export default function App() {
       </Modal>
 
       {/* Edit Log Entry Modal */}
-      <Modal visible={editingLogIdx !== null} transparent animationType="slide" onRequestClose={() => setEditingLogIdx(null)}>
-        <View style={s.modalOverlay}>
-          <View style={s.modalCard}>
-            <Text style={s.modalTitle}>EDIT LOG ENTRY</Text>
-            <Text style={s.fieldLabel}>ITEM DESCRIPTION</Text>
-            <TextInput style={s.input} placeholder="Item name..." placeholderTextColor={C.muted} value={editLogEntry.item} onChangeText={t => setEditLogEntry({ ...editLogEntry, item: t })} />
-            <View style={s.fieldsRow}>
-              {["calories", "sodium", "protein", "fiber"].map(f => (
-                <View key={f} style={{ flex: 1, marginHorizontal: 3 }}>
-                  <Text style={s.fieldLabel}>{f === "calories" ? "CAL" : f === "sodium" ? "NA" : f === "protein" ? "PRO" : "FIB"}</Text>
-                  <TextInput style={[s.input, { textAlign: "center", paddingHorizontal: 4 }]} keyboardType="decimal-pad" placeholderTextColor={C.muted} value={editLogEntry[f]} onChangeText={t => setEditLogEntry({ ...editLogEntry, [f]: t })} />
-                </View>
-              ))}
+      <Modal visible={editingLogIdx !== null} transparent animationType="fade" onRequestClose={() => setEditingLogIdx(null)}>
+        <View style={s.modalOverlayCenter}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
+            <View style={s.modalCardCenter}>
+              <Text style={s.modalTitle}>EDIT LOG ENTRY</Text>
+              <Text style={s.fieldLabel}>ITEM DESCRIPTION</Text>
+              <TextInput style={s.input} placeholder="Item name..." placeholderTextColor={C.muted} value={editLogEntry.item} onChangeText={t => setEditLogEntry({ ...editLogEntry, item: t })} />
+              <View style={s.fieldsRow}>
+                {["calories", "sodium", "protein", "fiber"].map(f => (
+                  <View key={f} style={{ flex: 1, marginHorizontal: 3 }}>
+                    <Text style={s.fieldLabel}>{f === "calories" ? "CAL" : f === "sodium" ? "NA" : f === "protein" ? "PRO" : "FIB"}</Text>
+                    <TextInput style={[s.input, { textAlign: "center", paddingHorizontal: 4 }]} keyboardType="decimal-pad" placeholderTextColor={C.muted} value={editLogEntry[f]} onChangeText={t => setEditLogEntry({ ...editLogEntry, [f]: t })} />
+                  </View>
+                ))}
+              </View>
+              <View style={s.row}>
+                <TouchableOpacity onPress={() => setEditingLogIdx(null)} style={[s.addBtn, { backgroundColor: "#ffffff15", flex: 0.4 }]}>
+                  <Text style={[s.addBtnText, { color: C.text }]}>CANCEL</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={saveEditLog} style={[s.addBtn, { flex: 0.6 }]}>
+                  <Text style={s.addBtnText}>SAVE</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={s.row}>
-              <TouchableOpacity onPress={() => setEditingLogIdx(null)} style={[s.addBtn, { backgroundColor: "#ffffff15", flex: 0.4 }]}>
-                <Text style={[s.addBtnText, { color: C.text }]}>CANCEL</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={saveEditLog} style={[s.addBtn, { flex: 0.6 }]}>
-                <Text style={s.addBtnText}>SAVE</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
       {/* Edit Library Item Modal */}
-      <Modal visible={editingLibIdx !== null} transparent animationType="slide" onRequestClose={() => setEditingLibIdx(null)}>
-        <View style={s.modalOverlay}>
-          <View style={s.modalCard}>
-            <Text style={s.modalTitle}>EDIT LIBRARY ITEM</Text>
-            <Text style={s.fieldLabel}>FOOD NAME</Text>
-            <TextInput style={s.input} placeholder="Food name..." placeholderTextColor={C.muted} value={editLibItem.name} onChangeText={t => setEditLibItem({ ...editLibItem, name: t })} />
-            <Text style={s.fieldLabel}>UNIT (nutrition values are per 1 of this unit)</Text>
-            <TouchableOpacity onPress={() => setShowEditLibUnitPicker(true)} style={[s.input, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
-              <Text style={{ color: C.text, fontSize: 14 }}>{editLibItem.unit}</Text>
-              <Text style={{ color: C.muted }}>▼</Text>
-            </TouchableOpacity>
-            <View style={s.fieldsRow}>
-              {["calories", "sodium", "protein", "fiber"].map(f => (
-                <View key={f} style={{ flex: 1, marginHorizontal: 3 }}>
-                  <Text style={s.fieldLabel}>{f === "calories" ? "CAL" : f === "sodium" ? "NA" : f === "protein" ? "PRO" : "FIB"}</Text>
-                  <TextInput style={[s.input, { textAlign: "center", paddingHorizontal: 4 }]} keyboardType="decimal-pad" placeholderTextColor={C.muted} value={editLibItem[f]} onChangeText={t => setEditLibItem({ ...editLibItem, [f]: t })} />
-                </View>
-              ))}
-            </View>
-            <View style={s.row}>
-              <TouchableOpacity onPress={() => setEditingLibIdx(null)} style={[s.addBtn, { backgroundColor: "#ffffff15", flex: 0.4 }]}>
-                <Text style={[s.addBtnText, { color: C.text }]}>CANCEL</Text>
+      <Modal visible={editingLibIdx !== null} transparent animationType="fade" onRequestClose={() => setEditingLibIdx(null)}>
+        <View style={s.modalOverlayCenter}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
+            <View style={s.modalCardCenter}>
+              <Text style={s.modalTitle}>EDIT LIBRARY ITEM</Text>
+              <Text style={s.fieldLabel}>FOOD NAME</Text>
+              <TextInput style={s.input} placeholder="Food name..." placeholderTextColor={C.muted} value={editLibItem.name} onChangeText={t => setEditLibItem({ ...editLibItem, name: t })} />
+              <Text style={s.fieldLabel}>UNIT (nutrition values are per 1 of this unit)</Text>
+              <TouchableOpacity onPress={() => setShowEditLibUnitPicker(true)} style={[s.input, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}>
+                <Text style={{ color: C.text, fontSize: 14 }}>{editLibItem.unit}</Text>
+                <Text style={{ color: C.muted }}>▼</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={saveEditLib} style={[s.addBtn, { flex: 0.6 }]}>
-                <Text style={s.addBtnText}>SAVE</Text>
-              </TouchableOpacity>
+              <View style={s.fieldsRow}>
+                {["calories", "sodium", "protein", "fiber"].map(f => (
+                  <View key={f} style={{ flex: 1, marginHorizontal: 3 }}>
+                    <Text style={s.fieldLabel}>{f === "calories" ? "CAL" : f === "sodium" ? "NA" : f === "protein" ? "PRO" : "FIB"}</Text>
+                    <TextInput style={[s.input, { textAlign: "center", paddingHorizontal: 4 }]} keyboardType="decimal-pad" placeholderTextColor={C.muted} value={editLibItem[f]} onChangeText={t => setEditLibItem({ ...editLibItem, [f]: t })} />
+                  </View>
+                ))}
+              </View>
+              <View style={s.row}>
+                <TouchableOpacity onPress={() => setEditingLibIdx(null)} style={[s.addBtn, { backgroundColor: "#ffffff15", flex: 0.4 }]}>
+                  <Text style={[s.addBtnText, { color: C.text }]}>CANCEL</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={saveEditLib} style={[s.addBtn, { flex: 0.6 }]}>
+                  <Text style={s.addBtnText}>SAVE</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -1380,114 +1360,118 @@ export default function App() {
       </Modal>
 
       {/* Scan Result Modal */}
-      <Modal visible={scanModal} transparent animationType="slide" onRequestClose={() => { setScanModal(false); setScannedData(null); }}>
-        <View style={s.modalOverlay}>
-          <View style={s.modalCard}>
-            <Text style={s.modalTitle}>SCAN RESULTS</Text>
-            <Text style={s.modalSub}>Review and edit before saving</Text>
-            {scannedData?.rawText !== undefined && (
-              <ScrollView style={{ maxHeight: 80, backgroundColor: "#000", padding: 8, borderRadius: 6, marginBottom: 10 }}>
-                <Text style={{ color: "#6b9e6b", fontSize: 9 }}>RAW OCR:{"\n"}{scannedData.rawText || "(empty)"}</Text>
-              </ScrollView>
-            )}
-            <Text style={s.fieldLabel}>FOOD NAME</Text>
-            <TextInput style={s.input} placeholder="Enter food name..." placeholderTextColor={C.muted} value={scannedData?.name || ""} onChangeText={t => setScannedData({ ...scannedData, name: t })} />
-            <Text style={s.fieldLabel}>UNIT (nutrition is per 1 of this unit)</Text>
-            <TouchableOpacity onPress={() => setShowScannedUnitPicker(true)} style={[s.input, { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }]}>
-              <Text style={{ color: C.text, fontSize: 14 }}>{scannedUnit}</Text>
-              <Text style={{ color: C.muted }}>▼</Text>
-            </TouchableOpacity>
-            <View style={s.fieldsRow}>
-              {["calories", "sodium", "protein", "fiber"].map(f => (
-                <View key={f} style={{ flex: 1, marginHorizontal: 3 }}>
-                  <Text style={s.fieldLabel}>{f === "calories" ? "CAL" : f === "sodium" ? "NA" : f === "protein" ? "PRO" : "FIB"}</Text>
-                  <TextInput style={[s.input, { textAlign: "center", paddingHorizontal: 4 }]} keyboardType="decimal-pad" placeholderTextColor={C.muted} value={String(scannedData?.[f] || "")} onChangeText={t => setScannedData({ ...scannedData, [f]: t })} />
-                </View>
-              ))}
-            </View>
-            <View style={s.row}>
-              <TouchableOpacity onPress={() => { setScanModal(false); setScannedData(null); }} style={[s.addBtn, { backgroundColor: "#ffffff15", flex: 0.4 }]}>
-                <Text style={[s.addBtnText, { color: C.text }]}>CANCEL</Text>
+      <Modal visible={scanModal} transparent animationType="fade" onRequestClose={() => { setScanModal(false); setScannedData(null); }}>
+        <View style={s.modalOverlayCenter}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
+            <View style={s.modalCardCenter}>
+              <Text style={s.modalTitle}>SCAN RESULTS</Text>
+              <Text style={s.modalSub}>Review and edit before saving</Text>
+              {scannedData?.rawText !== undefined && (
+                <ScrollView style={{ maxHeight: 80, backgroundColor: "#000", padding: 8, borderRadius: 6, marginBottom: 10 }}>
+                  <Text style={{ color: "#6b9e6b", fontSize: 9 }}>RAW OCR:{"\n"}{scannedData.rawText || "(empty)"}</Text>
+                </ScrollView>
+              )}
+              <Text style={s.fieldLabel}>FOOD NAME</Text>
+              <TextInput style={s.input} placeholder="Enter food name..." placeholderTextColor={C.muted} value={scannedData?.name || ""} onChangeText={t => setScannedData({ ...scannedData, name: t })} />
+              <Text style={s.fieldLabel}>UNIT (nutrition is per 1 of this unit)</Text>
+              <TouchableOpacity onPress={() => setShowScannedUnitPicker(true)} style={[s.input, { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }]}>
+                <Text style={{ color: C.text, fontSize: 14 }}>{scannedUnit}</Text>
+                <Text style={{ color: C.muted }}>▼</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={confirmScan} style={[s.addBtn, { flex: 0.6 }]}>
-                <Text style={s.addBtnText}>SAVE TO LIBRARY</Text>
-              </TouchableOpacity>
+              <View style={s.fieldsRow}>
+                {["calories", "sodium", "protein", "fiber"].map(f => (
+                  <View key={f} style={{ flex: 1, marginHorizontal: 3 }}>
+                    <Text style={s.fieldLabel}>{f === "calories" ? "CAL" : f === "sodium" ? "NA" : f === "protein" ? "PRO" : "FIB"}</Text>
+                    <TextInput style={[s.input, { textAlign: "center", paddingHorizontal: 4 }]} keyboardType="decimal-pad" placeholderTextColor={C.muted} value={String(scannedData?.[f] || "")} onChangeText={t => setScannedData({ ...scannedData, [f]: t })} />
+                  </View>
+                ))}
+              </View>
+              <View style={s.row}>
+                <TouchableOpacity onPress={() => { setScanModal(false); setScannedData(null); }} style={[s.addBtn, { backgroundColor: "#ffffff15", flex: 0.4 }]}>
+                  <Text style={[s.addBtnText, { color: C.text }]}>CANCEL</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={confirmScan} style={[s.addBtn, { flex: 0.6 }]}>
+                  <Text style={s.addBtnText}>SAVE TO LIBRARY</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
       {/* Add Exercise Modal */}
-      <Modal visible={showAddExModal} transparent animationType="slide" onRequestClose={() => setShowAddExModal(false)}>
-        <View style={s.modalOverlay}>
-          <View style={[s.modalCard, { maxHeight: "85%" }]}>
-            <Text style={s.modalTitle}>ADD EXERCISE</Text>
-            {!pendingEx ? (
-              <>
-                <TextInput style={s.input} placeholder="Search exercises..." placeholderTextColor={C.muted}
-                  value={exSearch} onChangeText={setExSearch} />
-                <ScrollView style={{ maxHeight: 320 }}>
-                  {workoutLib.filter(e => e.name.toLowerCase().includes(exSearch.toLowerCase())).map((ex, i) => (
-                    <TouchableOpacity key={i}
-                      onPress={() => { setPendingEx(ex); setPendingSets([{ weight: "", reps: "", notes: "" }]); }}
-                      style={s.unitItem}>
-                      <Text style={s.unitItemText}>{ex.name}</Text>
-                      <Text style={[s.entrySub, { marginTop: 2 }]}>{ex.category} · {ex.equipment}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-                <TouchableOpacity onPress={() => setShowAddExModal(false)}
-                  style={[s.addBtn, { marginTop: 12, backgroundColor: "#ffffff15" }]}>
-                  <Text style={[s.addBtnText, { color: C.text }]}>CANCEL</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Text style={[s.cardTitle, { marginBottom: 12 }]}>{pendingEx.name.toUpperCase()}</Text>
-                <ScrollView style={{ maxHeight: 260 }}>
-                  {pendingSets.map((set, i) => (
-                    <View key={i} style={{ flexDirection: "row", alignItems: "center", marginBottom: 6, gap: 6 }}>
-                      <Text style={[s.fieldLabel, { width: 24, marginBottom: 0 }]}>{i + 1}.</Text>
-                      <TextInput style={[s.input, { flex: 1, marginBottom: 0, textAlign: "center", paddingHorizontal: 4 }]}
-                        placeholder="lb" placeholderTextColor={C.muted} keyboardType="decimal-pad"
-                        value={set.weight}
-                        onChangeText={t => setPendingSets(pendingSets.map((s2, j) => j === i ? { ...s2, weight: t } : s2))} />
-                      <TextInput style={[s.input, { flex: 1, marginBottom: 0, textAlign: "center", paddingHorizontal: 4 }]}
-                        placeholder="reps" placeholderTextColor={C.muted} keyboardType="number-pad"
-                        value={set.reps}
-                        onChangeText={t => setPendingSets(pendingSets.map((s2, j) => j === i ? { ...s2, reps: t } : s2))} />
-                      <TouchableOpacity onPress={() => setPendingSets(pendingSets.filter((_, j) => j !== i))}
-                        style={s.deleteBtn}>
-                        <Text style={s.deleteBtnText}>✕</Text>
+      <Modal visible={showAddExModal} transparent animationType="fade" onRequestClose={() => setShowAddExModal(false)}>
+        <View style={s.modalOverlayCenter}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
+            <View style={[s.modalCardCenter, { maxHeight: "85%" }]}>
+              <Text style={s.modalTitle}>ADD EXERCISE</Text>
+              {!pendingEx ? (
+                <>
+                  <TextInput style={s.input} placeholder="Search exercises..." placeholderTextColor={C.muted}
+                    value={exSearch} onChangeText={setExSearch} />
+                  <ScrollView style={{ maxHeight: 320 }}>
+                    {workoutLib.filter(e => e.name.toLowerCase().includes(exSearch.toLowerCase())).map((ex, i) => (
+                      <TouchableOpacity key={i}
+                        onPress={() => { setPendingEx(ex); setPendingSets([{ weight: "", reps: "", notes: "" }]); }}
+                        style={s.unitItem}>
+                        <Text style={s.unitItemText}>{ex.name}</Text>
+                        <Text style={[s.entrySub, { marginTop: 2 }]}>{ex.category} · {ex.equipment}</Text>
                       </TouchableOpacity>
-                    </View>
-                  ))}
-                </ScrollView>
-                <TouchableOpacity onPress={() => setPendingSets([...pendingSets, { weight: "", reps: "", notes: "" }])}
-                  style={[s.addBtn, { backgroundColor: "#ffffff10", marginBottom: 8 }]}>
-                  <Text style={[s.addBtnText, { color: C.text }]}>+ ADD SET</Text>
-                </TouchableOpacity>
-                <View style={s.row}>
-                  <TouchableOpacity onPress={() => setPendingEx(null)}
-                    style={[s.addBtn, { backgroundColor: "#ffffff15", flex: 0.4 }]}>
-                    <Text style={[s.addBtnText, { color: C.text }]}>BACK</Text>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity onPress={() => setShowAddExModal(false)}
+                    style={[s.addBtn, { marginTop: 12, backgroundColor: "#ffffff15" }]}>
+                    <Text style={[s.addBtnText, { color: C.text }]}>CANCEL</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => {
-                    const valid = pendingSets.filter(st => st.weight || st.reps);
-                    if (valid.length === 0) { showFlash("Add at least one set"); return; }
-                    setWorkoutExercises([...workoutExercises, { exerciseId: pendingEx.id, sets: valid }]);
-                    setShowAddExModal(false);
-                    setPendingEx(null);
-                    setPendingSets([{ weight: "", reps: "", notes: "" }]);
-                    setExSearch("");
-                    showFlash("✓ Added: " + pendingEx.name);
-                  }} style={[s.addBtn, { flex: 0.6 }]}>
-                    <Text style={s.addBtnText}>SAVE</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={[s.cardTitle, { marginBottom: 12 }]}>{pendingEx.name.toUpperCase()}</Text>
+                  <ScrollView style={{ maxHeight: 260 }}>
+                    {pendingSets.map((set, i) => (
+                      <View key={i} style={{ flexDirection: "row", alignItems: "center", marginBottom: 6, gap: 6 }}>
+                        <Text style={[s.fieldLabel, { width: 24, marginBottom: 0 }]}>{i + 1}.</Text>
+                        <TextInput style={[s.input, { flex: 1, marginBottom: 0, textAlign: "center", paddingHorizontal: 4 }]}
+                          placeholder="lb" placeholderTextColor={C.muted} keyboardType="decimal-pad"
+                          value={set.weight}
+                          onChangeText={t => setPendingSets(pendingSets.map((s2, j) => j === i ? { ...s2, weight: t } : s2))} />
+                        <TextInput style={[s.input, { flex: 1, marginBottom: 0, textAlign: "center", paddingHorizontal: 4 }]}
+                          placeholder="reps" placeholderTextColor={C.muted} keyboardType="number-pad"
+                          value={set.reps}
+                          onChangeText={t => setPendingSets(pendingSets.map((s2, j) => j === i ? { ...s2, reps: t } : s2))} />
+                        <TouchableOpacity onPress={() => setPendingSets(pendingSets.filter((_, j) => j !== i))}
+                          style={s.deleteBtn}>
+                          <Text style={s.deleteBtnText}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity onPress={() => setPendingSets([...pendingSets, { weight: "", reps: "", notes: "" }])}
+                    style={[s.addBtn, { backgroundColor: "#ffffff10", marginBottom: 8 }]}>
+                    <Text style={[s.addBtnText, { color: C.text }]}>+ ADD SET</Text>
                   </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </View>
+                  <View style={s.row}>
+                    <TouchableOpacity onPress={() => setPendingEx(null)}
+                      style={[s.addBtn, { backgroundColor: "#ffffff15", flex: 0.4 }]}>
+                      <Text style={[s.addBtnText, { color: C.text }]}>BACK</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => {
+                      const valid = pendingSets.filter(st => st.weight || st.reps);
+                      if (valid.length === 0) { showFlash("Add at least one set"); return; }
+                      setWorkoutExercises([...workoutExercises, { exerciseId: pendingEx.id, sets: valid }]);
+                      setShowAddExModal(false);
+                      setPendingEx(null);
+                      setPendingSets([{ weight: "", reps: "", notes: "" }]);
+                      setExSearch("");
+                      showFlash("✓ Added: " + pendingEx.name);
+                    }} style={[s.addBtn, { flex: 0.6 }]}>
+                      <Text style={s.addBtnText}>SAVE</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </KeyboardAvoidingView>
@@ -1569,7 +1553,9 @@ const s = StyleSheet.create({
   scanBtn: { backgroundColor: C.gold, borderRadius: 10, padding: 16, alignItems: "center", marginBottom: 12 },
   scanBtnText: { color: C.bg, fontWeight: "bold", fontSize: 15, letterSpacing: 2 },
   modalOverlay: { flex: 1, backgroundColor: "#000000cc", justifyContent: "flex-end" },
+  modalOverlayCenter: { flex: 1, backgroundColor: "#000000cc", justifyContent: "center", paddingHorizontal: 16 },
   modalCard: { backgroundColor: C.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, borderWidth: 1, borderColor: C.border },
+  modalCardCenter: { backgroundColor: C.card, borderRadius: 16, padding: 24, borderWidth: 1, borderColor: C.border },
   modalTitle: { fontSize: 12, color: C.gold, letterSpacing: 3, marginBottom: 4 },
   modalSub: { fontSize: 12, color: C.muted, marginBottom: 16 },
   unitItem: { padding: 14, borderBottomWidth: 1, borderBottomColor: C.border },
